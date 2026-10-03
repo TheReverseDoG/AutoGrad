@@ -1,7 +1,9 @@
 #include "variable.h"
 #include <iostream>
+#include <cmath>
 
 using std::cout;
+using std::pow;
 
 void var::parents()
 {
@@ -66,18 +68,38 @@ void node::backward()
         return;
     else if(op == '+')
     {
-        last[0]->gradient += gradient;
-        last[1]->gradient += gradient;
+        if(last[0]->requires_grad)
+            last[0]->gradient += gradient;
+        if(last[1]->requires_grad)
+            last[1]->gradient += gradient;
     }
     else if(op == '*')
     {
-        last[0]->gradient += gradient * last[1]->data;
-        last[1]->gradient += gradient * last[0]->data;
+        if(last[0]->requires_grad)
+            last[0]->gradient += gradient * last[1]->data;
+        if(last[1]->requires_grad)
+            last[1]->gradient += gradient * last[0]->data;
     }
     else if(op == '-')
     {
-        last[0]->gradient += gradient;
-        last[1]->gradient -= gradient;
+        if(last[0]->requires_grad)
+            last[0]->gradient += gradient;
+        if(last[1]->requires_grad)    
+            last[1]->gradient -= gradient;
+    }
+    else if(op == '/')
+    {
+        if(last[0]->requires_grad)
+            last[0]->gradient += gradient / last[1]->data;
+        if(last[1]->requires_grad) 
+            last[1]->gradient -= gradient * last[0]->data / (last[1]->data * last[1]->data);
+    }
+    else if(op == '^')
+    {
+        if(last[0]->requires_grad)
+            last[0]->gradient += gradient * last[1]->data * data / last[0]->data;
+        if(last[1]->requires_grad)
+            last[1]->gradient += gradient * log(last[0]->data) * data;
     }
 }
 
@@ -101,4 +123,15 @@ var operator*(var a, var b)
 var operator-(var a, var b)
 {
     return new_var(a.value() - b.value(), '-', a, b);
+}
+
+var operator/(var a, var b)
+{
+    return new_var(a.value() / b.value(), '/', a, b); 
+}
+
+var power(var a, var b)
+{
+    float temp = pow(a.value(), b.value());
+    return new_var(temp, '^', a, b); 
 }
